@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket Client</title>
+</head>
+<body>
+
+<h1>WebSocket Client</h1>
+
+<button onclick="startWebSocket()">Start WebSocket</button>
+<button onclick="stopWebSocket()">Stop WebSocket</button>
+
+<script>
+  let socket;
+
+  function startWebSocket() {
+    // Connect to WebSocket server
+    socket = new WebSocket("ws://localhost:7071/");
+
+    // Set up event listeners
+    socket.addEventListener("open", (event) => {
+      console.log("WebSocket connection opened:", event);
+    });
+
+    socket.addEventListener("message", (event) => {
+      console.log("WebSocket message received:", event.data);
+    });
+
+    socket.addEventListener("close", (event) => {
+      console.log("WebSocket connection closed:", event);
+    });
+
+    // Send a random message every 3 seconds
+    setInterval(() => {
+      const randomMessage = getRandomMessage();
+      console.log("Sending message:", randomMessage);
+      socket.send(randomMessage);
+    }, 3000);
+  }
+
+  function stopWebSocket() {
+    if (socket) {
+      socket.close();
+      console.log("WebSocket connection closed");
+    }
+  }
+
+  function getRandomMessage() {
+    const messages = ["Hello", "How are you?", "Random message", "WebSocket example"];
+    const randomIndex = Math.floor(Math.random() * messages.length);
+    return messages[randomIndex];
+  }
+</script>
+
+</body>
+</html>
