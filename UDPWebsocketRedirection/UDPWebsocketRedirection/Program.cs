@@ -6,19 +6,17 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-
-using System;
 class Program
 {
     public static string m_configFileRelativePath = "ConfigRedirection.json";
-    public static UdpClient udpClient;
+    public static UdpClient udpClientRedirection;
 
     public class AppConfig {
 
-        public int m_portOfServer=7072;
+        public int m_portOfServerWebsocket = 7072;
+        public int m_portOfServerUDP = 7073;
         public string m_redirectionIp="127.0.0.1";
-        public int m_portOfRedirection=7073;
+        public int m_portOfRedirection=7074;
 
         public static AppConfig Configuration= new AppConfig();
         internal bool m_displayIpAddresses=true;
@@ -37,13 +35,17 @@ class Program
         if(AppConfig.Configuration.m_displayIpAddresses)
             NetworkInfo.DisplayConnectedLocalIPs();
         // Start the UDP client
-        udpClient = new UdpClient();
+        udpClientRedirection = new UdpClient();
 
+
+        UdpListener udpListener = new UdpListener();
+        udpListener.LaunchThread(AppConfig.Configuration.m_portOfServerUDP, (string text)=> { SendUDPMessage(text); }, (out bool contine)=> { contine = true; /*Bad code*/});
         // Start the WebSocket server
         HttpListener httpListener = new HttpListener();
-        httpListener.Prefixes.Add($"http://localhost:{AppConfig.Configuration.m_portOfServer}/");
+        httpListener.Prefixes.Add($"http://*:{AppConfig.Configuration.m_portOfServerWebsocket}/");
         httpListener.Start();
-        Console.WriteLine($"WebSocket server is running on http://localhost:{AppConfig.Configuration.m_portOfServer}/");
+        Console.WriteLine($"WebSocket server is running on http://{NetworkInfo.GetRouterPublicIpAddress()}:{AppConfig.Configuration.m_portOfServerWebsocket}/");
+        Console.WriteLine($"UDP server is running on http://{NetworkInfo.GetRouterPublicIpAddress()}:{AppConfig.Configuration.m_portOfServerUDP}/");
 
 
         HideWindow.MinimizeConsoleWindow();
@@ -102,7 +104,7 @@ class Program
         {
             byte[] data = Encoding.UTF8.GetBytes(message);
             IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.Configuration.m_redirectionIp), AppConfig.Configuration.m_portOfRedirection);
-            udpClient.Send(data, data.Length, endPoint);
+            udpClientRedirection.Send(data, data.Length, endPoint);
             Console.WriteLine($"Sent message via UDP: {message}");
         }
         catch (Exception ex)

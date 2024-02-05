@@ -3,7 +3,7 @@ import websockets
 import random
 
 async def send_random_numbers():
-    uri = "ws://localhost:7071/"
+    uri = "ws://localhost:7072/"
     
     while True:
         try:

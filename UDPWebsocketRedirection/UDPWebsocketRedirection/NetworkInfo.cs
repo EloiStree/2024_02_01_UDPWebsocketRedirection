@@ -5,7 +5,7 @@ class NetworkInfo
 {
 
 
-    static string GetRouterPublicIpAddress()
+    public static string GetRouterPublicIpAddress()
     {
         try
         {
