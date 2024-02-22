@@ -13,10 +13,10 @@ class Program
 
     public class AppConfig {
 
-        public int m_portOfServerWebsocket = 7072;
-        public int m_portOfServerUDP = 7073;
+        public int m_portOfServerWebsocket = 7065;
+        public int m_portOfServerByteUDP = 7066;
+        public int m_portOfByteRedirection = 12346;
         public string m_redirectionIp="127.0.0.1";
-        public int m_portOfRedirection=7074;
 
         public static AppConfig Configuration= new AppConfig();
         internal bool m_displayIpAddresses=true;
@@ -39,13 +39,14 @@ class Program
 
 
         UdpListener udpListener = new UdpListener();
-        udpListener.LaunchThread(AppConfig.Configuration.m_portOfServerUDP, (string text)=> { SendUDPMessage(text); }, (out bool contine)=> { contine = true; /*Bad code*/});
+        udpListener.LaunchThread(AppConfig.Configuration.m_portOfServerByteUDP, (byte[] text) => { SendUDPMessage(text); }, (out bool contine) => { contine = true; /*Bad code*/});
+
         // Start the WebSocket server
         HttpListener httpListener = new HttpListener();
         httpListener.Prefixes.Add($"http://*:{AppConfig.Configuration.m_portOfServerWebsocket}/");
         httpListener.Start();
         Console.WriteLine($"WebSocket server is running on http://{NetworkInfo.GetRouterPublicIpAddress()}:{AppConfig.Configuration.m_portOfServerWebsocket}/");
-        Console.WriteLine($"UDP server is running on http://{NetworkInfo.GetRouterPublicIpAddress()}:{AppConfig.Configuration.m_portOfServerUDP}/");
+        Console.WriteLine($"UDP server is running on http://{NetworkInfo.GetRouterPublicIpAddress()}:{AppConfig.Configuration.m_portOfServerByteUDP}/");
 
 
         HideWindow.MinimizeConsoleWindow();
@@ -76,40 +77,39 @@ class Program
 
     static async Task HandleWebSocketMessages(WebSocket webSocket)
     {
-        byte[] buffer = new byte[1024];
+        // intIndex intCommand long byteToken
+        byte[] buffer = new byte[32];
 
         while (webSocket.State == WebSocketState.Open)
         {
-            WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
-            if (result.MessageType == WebSocketMessageType.Text)
-            {
-                string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                Console.WriteLine($"Received message: {message}");
-
-                // Send the received message via UDP
-                SendUDPMessage(message);
-            }
-            else if (result.MessageType == WebSocketMessageType.Close)
-            {
-                Console.WriteLine("WebSocket connection closed.");
-                break;
-            }
+                WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                 if (result.MessageType == WebSocketMessageType.Binary)
+                {
+                    Console.WriteLine($"Received messag bytes: {buffer.Length}");
+                    SendUDPMessage(buffer);
+                }
+                else if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    Console.WriteLine("WebSocket connection closed.");
+                    break;
+                }
         }
     }
 
-    static void SendUDPMessage(string message)
+    static void SendUDPMessage(byte[] byteMessage)
     {
         try
         {
-            byte[] data = Encoding.UTF8.GetBytes(message);
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.Configuration.m_redirectionIp), AppConfig.Configuration.m_portOfRedirection);
-            udpClientRedirection.Send(data, data.Length, endPoint);
-            Console.WriteLine($"Sent message via UDP: {message}");
+            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(AppConfig.Configuration.m_redirectionIp), AppConfig.Configuration.m_portOfByteRedirection);
+            udpClientRedirection.Send(byteMessage, byteMessage.Length, endPoint);
+
+            Console.WriteLine($"Sent message via bytes: {byteMessage.Length} | ");
+
+            Console.Write(string.Join(",", byteMessage));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error sending UDP message: {ex.Message}");
+            Console.WriteLine($"Error sending UDP byte: {ex.Message}");
         }
     }
 }
